@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stack Method Deal</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0e0e0f; --surface: #18181b; --surface2: #222226;
+    --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.14);
+    --accent: #c9a84c; --accent-dim: rgba(201,168,76,0.12); --accent-dim2: rgba(201,168,76,0.22);
+    --text: #f0ede8; --text-muted: #8a8680; --text-dim: #4a4845;
+    --card-front: #1a1a1e; --card-back: #16191e; --radius: 16px;
+    --green: #4caf7d; --green-dim: rgba(76,175,125,0.12);
+    --hot: #e07a5f; --hot-dim: rgba(224,122,95,0.12); --hot-dim2: rgba(224,122,95,0.22);
+  }
+  body {
+    background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif;
+    font-weight: 300; min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; padding: 40px 20px 60px; overflow-x: hidden;
+  }
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background-image: linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 60px 60px; pointer-events: none; z-index: 0;
+  }
+  .container { position: relative; z-index: 1; width: 100%; max-width: 720px; }
+  header { text-align: center; margin-bottom: 36px; }
+  .eyebrow { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+  h1 { font-family: 'Playfair Display', serif; font-size: clamp(28px, 5vw, 42px); font-weight: 400; color: var(--text); line-height: 1.2; margin-bottom: 10px; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 4px; margin-bottom: 36px; }
+  .tab { flex: 1; padding: 10px 10px; border-radius: 9px; border: none; background: none; color: var(--text-muted); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 400; cursor: pointer; transition: background 0.2s, color 0.2s; text-align: center; }
+  .tab:hover { color: var(--text); }
+  .tab.active { background: var(--surface2); color: var(--text); border: 1px solid var(--border2); }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* Section header shared */
+  .sec-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .sec-title { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 400; }
+  .sec-meta { font-size: 13px; color: var(--text-muted); }
+
+  /* Daily Schedule */
+  .task-list { display: flex; flex-direction: column; gap: 10px; }
+  .task { display: flex; align-items: center; gap: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; cursor: pointer; transition: background 0.2s, border-color 0.2s; user-select: none; }
+  .task:hover { background: var(--surface2); border-color: var(--border2); }
+  .task.done { background: var(--green-dim); border-color: rgba(76,175,125,0.25); }
+  .task-check { width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid var(--text-dim); flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: background 0.2s, border-color 0.2s; font-size: 13px; }
+  .task.done .task-check { background: var(--green); border-color: var(--green); color: #0e0e0f; }
+  .task-text { font-size: 15px; font-weight: 300; color: var(--text); line-height: 1.5; transition: color 0.2s; }
+  .task.done .task-text { color: var(--text-muted); text-decoration: line-through; text-decoration-color: rgba(76,175,125,0.5); }
+  .sec-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 20px; }
+  .progress-text { font-size: 13px; color: var(--text-muted); }
+  .ghost-btn { background: none; border: none; color: var(--text-dim); font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; padding: 6px 10px; border-radius: 6px; transition: color 0.2s, background 0.2s; }
+  .ghost-btn:hover { color: var(--text-muted); background: var(--surface2); }
+
+  /* Deals Under Contract */
+  .add-deal-btn {
+    display: flex; align-items: center; gap: 8px; width: 100%;
+    background: var(--accent-dim); border: 1px dashed rgba(201,168,76,0.3);
+    border-radius: 12px; padding: 14px 20px; color: var(--accent);
+    font-family: 'DM Sans', sans-serif; font-size: 14px; cursor: pointer;
+    transition: background 0.2s, border-color 0.2s; margin-bottom: 16px;
+  }
+  .add-deal-btn:hover { background: var(--accent-dim2); border-color: rgba(201,168,76,0.5); }
+  .deals-list { display: flex; flex-direction: column; gap: 12px; }
+  .deal-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .deal-card-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+  .deal-number { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim); }
+  .deal-delete { background: none; border: none; color: var(--text-dim); font-size: 18px; cursor: pointer; line-height: 1; padding: 0 4px; transition: color 0.2s; }
+  .deal-delete:hover { color: #e05a5a; }
+  .deal-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  .deal-field { padding: 14px 18px; border-right: 1px solid var(--border); }
+  .deal-field:last-child { border-right: none; }
+  .deal-field label { display: block; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; }
+  .deal-field input {
+    width: 100%; background: none; border: none; outline: none;
+    font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 300;
+    color: var(--text); padding: 0;
+  }
+  .deal-field input::placeholder { color: var(--text-dim); }
+  .deal-field input:focus { border-bottom: 1px solid var(--border2); }
+  .deals-total { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; display: flex; align-items: center; justify-content: space-between; margin-top: 20px; }
+  .deals-total-label { font-size: 13px; color: var(--text-muted); }
+  .deals-total-value { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 400; color: var(--accent); }
+  .deals-empty { text-align: center; padding: 48px 20px; color: var(--text-dim); font-size: 14px; }
+
+  /* Hot Leads */
+  .add-hot-btn {
+    display: flex; align-items: center; gap: 8px; width: 100%;
+    background: var(--hot-dim); border: 1px dashed rgba(224,122,95,0.3);
+    border-radius: 12px; padding: 14px 20px; color: var(--hot);
+    font-family: 'DM Sans', sans-serif; font-size: 14px; cursor: pointer;
+    transition: background 0.2s, border-color 0.2s; margin-bottom: 16px;
+  }
+  .add-hot-btn:hover { background: var(--hot-dim2); border-color: rgba(224,122,95,0.5); }
+  .hot-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .hot-card-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+  .hot-badge { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--hot); opacity: 0.6; }
+  .hot-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  .hot-field { padding: 14px 18px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .hot-field:nth-child(2) { border-right: none; }
+  .hot-notes-field { padding: 14px 18px; }
+  .hot-field label, .hot-notes-field label { display: block; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; }
+  .hot-field input {
+    width: 100%; background: none; border: none; outline: none;
+    font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 300;
+    color: var(--text); padding: 0;
+  }
+  .hot-field input::placeholder { color: var(--text-dim); }
+  .hot-field input:focus { border-bottom: 1px solid var(--border2); }
+  .hot-notes-field textarea {
+    width: 100%; background: none; border: none; outline: none; resize: none;
+    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 300;
+    color: var(--text); padding: 0; line-height: 1.6; min-height: 72px;
+  }
+  .hot-notes-field textarea::placeholder { color: var(--text-dim); }
+  .hot-notes-field textarea:focus { border-bottom: 1px solid var(--border2); }
+
+  /* Flashcards */
+  .progress-row { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+  .progress-bar { flex: 1; height: 2px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.4s ease; }
+  .counter { font-size: 13px; color: var(--text-muted); white-space: nowrap; min-width: 48px; text-align: right; }
+  .card-scene { perspective: 1200px; width: 100%; height: 380px; cursor: pointer; margin-bottom: 32px; }
+  @media (max-width: 500px) { .card-scene { height: 460px; } }
+  .card-inner { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+  .card-inner.flipped { transform: rotateY(180deg); }
+  .card-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: var(--radius); border: 1px solid var(--border); padding: 40px 48px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+  .card-front { background: var(--card-front); }
+  .card-front::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--accent), transparent); border-radius: var(--radius) var(--radius) 0 0; opacity: 0.6; }
+  .card-back { background: var(--card-back); transform: rotateY(180deg); }
+  .card-back::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, #5a8fd4, transparent); border-radius: var(--radius) var(--radius) 0 0; opacity: 0.5; }
+  .card-label { font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 20px; }
+  .card-back .card-label { color: rgba(90,143,212,0.5); }
+  .card-q { font-family: 'Playfair Display', serif; font-size: clamp(18px, 3vw, 24px); font-weight: 400; line-height: 1.45; color: var(--text); max-width: 560px; }
+  .card-a { font-size: clamp(13px, 2vw, 15px); font-weight: 300; line-height: 1.75; color: var(--text); max-width: 560px; opacity: 0.9; white-space: pre-line; text-align: left; }
+  .flip-hint { position: absolute; bottom: 20px; right: 24px; font-size: 11px; color: var(--text-dim); transition: color 0.2s; }
+  .card-scene:hover .flip-hint { color: var(--text-muted); }
+  .controls { display: flex; gap: 12px; justify-content: center; align-items: center; flex-wrap: wrap; }
+  .btn { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 28px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 400; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background 0.2s, border-color 0.2s, transform 0.1s; user-select: none; }
+  .btn:hover:not(:disabled) { background: var(--surface); border-color: var(--border2); }
+  .btn:active:not(:disabled) { transform: scale(0.97); }
+  .btn:disabled { opacity: 0.25; cursor: default; }
+  .btn-flip { background: var(--accent-dim); border-color: rgba(201,168,76,0.25); color: var(--accent); padding: 12px 36px; }
+  .btn-flip:hover { background: var(--accent-dim2) !important; border-color: rgba(201,168,76,0.4) !important; }
+  .actions { display: flex; justify-content: center; gap: 12px; margin-top: 28px; }
+  .action-btn { background: none; border: none; color: var(--text-muted); font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; padding: 6px 12px; border-radius: 6px; transition: color 0.2s, background 0.2s; }
+  .action-btn:hover { color: var(--text); background: var(--surface2); }
+  .key-hint { text-align: center; margin-top: 24px; font-size: 12px; color: var(--text-dim); }
+  kbd { display: inline-block; padding: 2px 7px; border: 1px solid var(--text-dim); border-radius: 4px; font-family: 'DM Sans', sans-serif; font-size: 11px; color: var(--text-dim); }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes slideInRight { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: translateX(0); } }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="eyebrow">Study Guide</div>
+    <h1>Stack Method Deal</h1>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('schedule')">Daily Schedule</button>
+    <button class="tab" onclick="switchTab('deals')">Deals Under Contract</button>
+    <button class="tab" onclick="switchTab('hotleads')">Hot Leads</button>
+    <button class="tab" onclick="switchTab('flashcards')">Flashcards</button>
+  </div>
+
+  <!-- Daily Schedule -->
+  <div class="page active" id="page-schedule">
+    <div class="sec-header">
+      <div class="sec-title">Daily Schedule</div>
+      <div class="sec-meta" id="sched-meta">0 of 6 completed</div>
+    </div>
+    <div class="task-list" id="task-list">
+      <div class="task" onclick="toggleTask(0)"><div class="task-check" id="chk-0"></div><div class="task-text">Respond to messages from previous day</div></div>
+      <div class="task" onclick="toggleTask(1)"><div class="task-check" id="chk-1"></div><div class="task-text">Follow up with all ones we have sent an agreement to</div></div>
+      <div class="task" onclick="toggleTask(2)"><div class="task-check" id="chk-2"></div><div class="task-text">Respond to new messages and send offers</div></div>
+      <div class="task" onclick="toggleTask(3)"><div class="task-check" id="chk-3"></div><div class="task-text">Follow up previous sellers we have been discussing offer with</div></div>
+      <div class="task" onclick="toggleTask(4)"><div class="task-check" id="chk-4"></div><div class="task-text">Review flash cards and do practice calls</div></div>
+      <div class="task" onclick="toggleTask(5)"><div class="task-check" id="chk-5"></div><div class="task-text">1-2 times a week discuss active deals with Ryan so you have updates on them</div></div>
+    </div>
+    <div class="sec-footer">
+      <div class="progress-text" id="sched-progress"></div>
+      <button class="ghost-btn" onclick="resetTasks()">↺ Reset all</button>
+    </div>
+  </div>
+
+  <!-- Deals Under Contract -->
+  <div class="page" id="page-deals">
+    <div class="sec-header">
+      <div class="sec-title">Deals Under Contract</div>
+      <div class="sec-meta" id="deals-meta">0 deals</div>
+    </div>
+
+    <button class="add-deal-btn" onclick="addDeal()">
+      <span style="font-size:20px; line-height:1;">+</span> Add Deal
+    </button>
+
+    <div class="deals-list" id="deals-list">
+      <div class="deals-empty" id="deals-empty">No deals yet — click Add Deal to get started</div>
+    </div>
+
+    <div class="deals-total" id="deals-total" style="display:none;">
+      <div>
+        <div class="deals-total-label">Total Assignment Fees</div>
+      </div>
+      <div class="deals-total-value" id="total-value">$0</div>
+    </div>
+  </div>
+
+  <!-- Hot Leads -->
+  <div class="page" id="page-hotleads">
+    <div class="sec-header">
+      <div class="sec-title">Hot Leads</div>
+      <div class="sec-meta" id="hot-meta">0 leads</div>
+    </div>
+
+    <button class="add-hot-btn" onclick="addHot()">
+      <span style="font-size:20px; line-height:1;">+</span> Add Lead
+    </button>
+
+    <div class="deals-list" id="hot-list">
+      <div class="deals-empty" id="hot-empty">No leads yet — click Add Lead to get started</div>
+    </div>
+  </div>
+
+  <!-- Flashcards -->
+  <div class="page" id="page-flashcards">
+    <div class="progress-row">
+      <div class="progress-bar"><div class="progress-fill" id="prog"></div></div>
+      <div class="counter" id="counter">1 / 19</div>
+    </div>
+    <div class="card-scene" id="scene" onclick="flipCard()" role="button" aria-label="Flashcard, click to flip">
+      <div class="card-inner" id="inner">
+        <div class="card-face card-front">
+          <div class="card-label">Question</div>
+          <div class="card-q" id="q-text"></div>
+          <div class="flip-hint">Tap to flip ↻</div>
+        </div>
+        <div class="card-face card-back">
+          <div class="card-label">Answer</div>
+          <div class="card-a" id="a-text"></div>
+        </div>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="btn" id="prev-btn" onclick="prevCard()">← Previous</button>
+      <button class="btn btn-flip" onclick="flipCard()">Flip Card</button>
+      <button class="btn" id="next-btn" onclick="nextCard()">Next →</button>
+    </div>
+    <div class="actions">
+      <button class="action-btn" onclick="shuffleCards()">⇄ Shuffle</button>
+      <button class="action-btn" onclick="resetCards()">↺ Restart</button>
+    </div>
+    <div class="key-hint">Keyboard: <kbd>Space</kbd> flip &nbsp; <kbd>←</kbd> prev &nbsp; <kbd>→</kbd> next</div>
+  </div>
+</div>
+
+<script type="module">
+// ── Tab switching ──
+function switchTab(name) {
+  ['schedule','deals','hotleads','flashcards'].forEach((n, i) => {
+    document.querySelectorAll('.tab')[i].classList.toggle('active', n === name);
+    document.getElementById('page-' + n).classList.toggle('active', n === name);
+  });
+}
+
+// ── Daily Schedule ──
+const TOTAL = 6;
+let done = new Array(TOTAL).fill(false);
+function toggleTask(i) {
+  done[i] = !done[i];
+  const tasks = document.querySelectorAll('.task');
+  tasks[i].classList.toggle('done', done[i]);
+  document.getElementById('chk-' + i).textContent = done[i] ? '✓' : '';
+  updateSchedMeta();
+}
+function updateSchedMeta() {
+  const count = done.filter(Boolean).length;
+  document.getElementById('sched-meta').textContent = count + ' of ' + TOTAL + ' completed';
+  document.getElementById('sched-progress').textContent = count === TOTAL ? '🎉 All done for today!' : '';
+}
+function resetTasks() {
+  done = new Array(TOTAL).fill(false);
+  document.querySelectorAll('.task').forEach(t => t.classList.remove('done'));
+  for (let i = 0; i < TOTAL; i++) document.getElementById('chk-' + i).textContent = '';
+  updateSchedMeta();
+}
+
+// ── Firebase Setup ──
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, onSnapshot, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyB2GThandYqPkPN5scSdPO503hAvGyQrVE",
+  authDomain: "stack-method.firebaseapp.com",
+  projectId: "stack-method",
+  storageBucket: "stack-method.firebasestorage.app",
+  messagingSenderId: "616106132919",
+  appId: "1:616106132919:web:2a30cc0c2809655f62d432"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const dealsRef = doc(db, 'smd', 'deals');
+const hotRef   = doc(db, 'smd', 'hotleads');
+
+function saveDeals() {
+  setDoc(dealsRef, { deals, dealIdCounter }).catch(e => console.error('Save deals error:', e));
+}
+function saveHot() {
+  setDoc(hotRef, { hotLeads, hotIdCounter }).catch(e => console.error('Save hot error:', e));
+}
+
+// Listen for real-time updates from Firestore
+function initFirestore() {
+  onSnapshot(dealsRef, snap => {
+    if (snap.exists()) {
+      const d = snap.data();
+      deals = d.deals || [];
+      dealIdCounter = d.dealIdCounter || 0;
+      renderDeals();
+    }
+  });
+  onSnapshot(hotRef, snap => {
+    if (snap.exists()) {
+      const d = snap.data();
+      hotLeads = d.hotLeads || [];
+      hotIdCounter = d.hotIdCounter || 0;
+      renderHot();
+    }
+  });
+}
+
+function loadDeals() {}
+function loadHot() {}
+
+// ── Deals Under Contract ──
+let deals = [];
+let dealIdCounter = 0;
+
+function addDeal() {
+  const id = ++dealIdCounter;
+  deals.push({ id, address: '', fee: '' });
+  renderDeals();
+  saveDeals();
+}
+
+function removeDeal(id) {
+  deals = deals.filter(d => d.id !== id);
+  renderDeals();
+  saveDeals();
+}
+
+function updateDeal(id, field, value) {
+  const deal = deals.find(d => d.id === id);
+  if (deal) deal[field] = value;
+  updateTotal();
+  updateDealsMeta();
+  saveDeals();
+}
+
+function updateTotal() {
+  const total = deals.reduce((sum, d) => {
+    const val = parseFloat((d.fee || '').replace(/[^0-9.]/g, '')) || 0;
+    return sum + val;
+  }, 0);
+  document.getElementById('total-value').textContent = '$' + total.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  document.getElementById('deals-total').style.display = deals.length ? 'flex' : 'none';
+}
+
+function updateDealsMeta() {
+  const count = deals.length;
+  document.getElementById('deals-meta').textContent = count + (count === 1 ? ' deal' : ' deals');
+}
+
+function renderDeals() {
+  const list = document.getElementById('deals-list');
+  const empty = document.getElementById('deals-empty');
+  empty.style.display = deals.length ? 'none' : 'block';
+  list.querySelectorAll('.deal-card').forEach(el => el.remove());
+  deals.forEach((deal, idx) => {
+    const card = document.createElement('div');
+    card.className = 'deal-card';
+    card.innerHTML = `
+      <div class="deal-card-header">
+        <div class="deal-number">Deal #${idx + 1}</div>
+        <button class="deal-delete" onclick="removeDeal(${deal.id})" title="Remove">×</button>
+      </div>
+      <div class="deal-fields">
+        <div class="deal-field">
+          <label>Address</label>
+          <input type="text" placeholder="123 Main St, City, ST" value="${deal.address}"
+            oninput="updateDeal(${deal.id}, 'address', this.value)" />
+        </div>
+        <div class="deal-field">
+          <label>Assignment Fee</label>
+          <input type="text" placeholder="$0.00" value="${deal.fee}"
+            oninput="updateDeal(${deal.id}, 'fee', this.value)" />
+        </div>
+      </div>`;
+    list.appendChild(card);
+  });
+  updateTotal();
+  updateDealsMeta();
+}
+
+// ── Hot Leads ──
+let hotLeads = [];
+let hotIdCounter = 0;
+
+function addHot() {
+  const id = ++hotIdCounter;
+  hotLeads.push({ id, address: '', notes: '' });
+  renderHot();
+  saveHot();
+}
+
+function removeHot(id) {
+  hotLeads = hotLeads.filter(h => h.id !== id);
+  renderHot();
+  saveHot();
+}
+
+function updateHot(id, field, value) {
+  const lead = hotLeads.find(h => h.id === id);
+  if (lead) lead[field] = value;
+  updateHotMeta();
+  saveHot();
+}
+
+function updateHotMeta() {
+  const count = hotLeads.length;
+  document.getElementById('hot-meta').textContent = count + (count === 1 ? ' lead' : ' leads');
+}
+
+function renderHot() {
+  const list = document.getElementById('hot-list');
+  const empty = document.getElementById('hot-empty');
+  empty.style.display = hotLeads.length ? 'none' : 'block';
+  list.querySelectorAll('.hot-card').forEach(el => el.remove());
+  hotLeads.forEach((lead, idx) => {
+    const card = document.createElement('div');
+    card.className = 'hot-card';
+    card.innerHTML = `
+      <div class="hot-card-header">
+        <div class="hot-badge">🔥 Lead #${idx + 1}</div>
+        <button class="deal-delete" onclick="removeHot(${lead.id})" title="Remove">×</button>
+      </div>
+      <div class="hot-fields" style="grid-template-columns: 1fr;">
+        <div class="hot-field" style="border-right: none;">
+          <label>Address</label>
+          <input type="text" placeholder="123 Main St, City, ST" value="${lead.address}"
+            oninput="updateHot(${lead.id}, 'address', this.value)" />
+        </div>
+      </div>
+      <div class="hot-notes-field">
+        <label>Notes</label>
+        <textarea placeholder="Add notes about this lead — seller motivation, timeline, follow-up details..."
+          oninput="updateHot(${lead.id}, 'notes', this.value)">${lead.notes}</textarea>
+      </div>`;
+    list.appendChild(card);
+  });
+  updateHotMeta();
+}
+
+// ── Flashcards ──
+const allCards = [
+  { q: "What is a stack method deal?", a: "A stack method deal is a form of purchasing real estate that involves utilizing an DSCR loan as well as seller financing. This lessens the amount a buyer is required to pay out of pocket & gives them the ability to make money at closing from the purchase." },
+  { q: "How does a buyer make money on a stack method deal?", a: "The buyer makes money by obtaining an DSCR loan for more than the down payment to the seller. The DSCR loan pays the down payment to the seller, closing costs, and any leftover funds is net to buyer." },
+  { q: "If the seller has a loan on the property can you do a stack method?", a: "Yes, however the down payment will need to pay off the current mortgage. We can offer as much as 50-55% down to pay off the existing mortgage." },
+  { q: "How does a realtor get paid on a stack deal?", a: "The realtor is paid from the down payment amount. Buyer covers all title & escrow fees for both sides. Seller is only responsible for paying the listing agent commission from the down payment." },
+  { q: "Why does the seller need to be in second lien?", a: "For our structure the buyer will obtain financing for the down payment at closing to the seller. The DSCR lender that is funding the purchase would require first position. The seller will be held in second lien." },
+  { q: "What protections are there for the seller while being in second lien?", a: "There are multiple provisions in place to protect the seller. The seller will have a recorded mortgage on the property along with a promissory note. Buyer cannot place any additional liens or sell the property until the seller has been paid the remaining balance owed. There is also an 30 day default clause in the final agreement." },
+  { q: "What happens if the buyer defaults? Is the seller responsible for paying the first position lien?", a: "Yes if the buyer were to default and the property reverts back to the seller they would be responsible for paying off the DSCR loan. That being said the default terms between buyer and seller is 30 days. With the lender and buyer it is 90 days+. As long as the seller were to maintain payments to the DSCR lender they will not foreclose on the property." },
+  { q: "Who handles taxes and insurance?", a: "Buyer is responsible for all taxes and insurance. Those expenses will be escrowed in with the DSCR loan." },
+  { q: "How will my seller know if the DSCR loan is being paid?", a: "Buyer sets up servicing on the property. The servicer can provide proof of payment to the seller for the DSCR loan payments as well as the taxes and insurance." },
+  { q: "What do you do with these properties / how long have you been in business?", a: "We operate these properties as mid-term rentals primarily. Insurance rentals, co-living, cooperate housing, etc. However after paying the DCSR loan & seller finance payments if the property cashflows as a traditional long term rental we are open to that as well. I have been with the company for 3 years now, altogether they have been operating 15+ years." },
+  { q: "Have you ever defaulted?", a: "No, since I have been with the company we have not defaulted on a single seller finance deal. We have enough residual income coming in off all of our properties that even if one is under-performing we have other income we can pull from to make sure payments are owed." },
+  { q: "How many of these do you own?", a: "Altogether the company has roughly 80 single family doors, 4 office parks, and currently 2 mobile home parks. However we are under contract and set to close on 2 additional mobile home parks." },
+  { q: "Why would a seller want to do this?", a: "Multiple reasons these deals benefit a seller. One being they net much more than they would with a traditional sale. With our interest only payment structure each payment to the seller is net to them with nothing taken off the balance owed. It also reduced their tax burden & breaks it up into multiple transactions. If a seller needs the money from the sale to buy another property we may not be the best fit, but in most other cases this route can be much more beneficial than a traditional sale." },
+  { q: "How quick can you close?", a: "Typically within 30 days, on the final agreement we will put on or before 40 days just so we have a buffer. The longest part of the process is the appraisal. We do an appraisal for each one we buy, obviously we are at the mercy of the appraiser and how quick they can make it out & return the form to us." },
+  { q: "Assuming my seller wants to proceed what are the next steps?", a: "Next steps would be for us to send you over the final agreement. Once signed by the seller I will send everything over to our transaction coordinator so she can open escrow for us. We will submit EMD and order the appraisal. Once the appraisal is ordered we will let you know once scheduled. Assuming it comes back at or above the purchase price we are offering we will be ready to close. From date the appraisal comes back to the closing date it is usually about a week." },
+  { q: "Why do you not just pay cash for the down payment?", a: "Utilizing the DSCR structure allows us to scale much quicker than if we were to pay cash for the down payment on every deal we buy. We do pay cash for some properties but those are primarily for fix and flip style properties we can renovate & resell within a 3-6 month window." },
+  { q: "What is the exact process for a stack method deal?", a: "• Contract signed with seller & sent to title company\n• Buyer submits EMD & sends contract to lender\n• Lender orders appraisal and contacts buyer for appraisal date\n• Appraisal is completed (this can be 1-2 weeks depending on availability of appraisal company)\n• Assuming appraisal comes back at or above the purchase price & no conditions (repairs) are needed then lender approves financing\n• 1-2 Weeks from lender approved financing date, lender then wires money to title\n• Title prepares and drafts all seller finance documents, seller approves and both buyer and seller are set up for signing closing documents\n• Once signed, funding is initiated. Seller is paid, wholesalers are paid, realtors are paid\n• Seller finance documents are recorded with the county\n• Buyer makes seller finance payments to the seller on the first of every month until balloon date" },
+  { q: "What does DSCR stand for? / What type of loan is this?", a: "DSCR - Debt Service Coverage Ratio\n\nInvestor style loan for rental properties. It is not the same as a conventional / FHA loan that is used for homeowners on primary residences. DSCR loans are specifically for investors." },
+  { q: "Why are payments to the seller interest only?", a: "We structure our monthly payments as interest only for two reasons. One, it nets the seller more money overall as opposed to amortizing. Each months payment is net to the seller with no principle paid down. For us the benefit is we get a lesser monthly payment & higher cashflow margin." }
+];
+
+let cards = [...allCards];
+let cur = 0;
+let flipped = false;
+
+function render(direction) {
+  const scene = document.getElementById('scene');
+  const inner = document.getElementById('inner');
+  if (direction) { scene.style.animation = 'none'; scene.offsetHeight; }
+  document.getElementById('q-text').textContent = cards[cur].q;
+  document.getElementById('a-text').textContent = cards[cur].a;
+  document.getElementById('counter').textContent = (cur + 1) + ' / ' + cards.length;
+  document.getElementById('prog').style.width = ((cur + 1) / cards.length * 100) + '%';
+  document.getElementById('prev-btn').disabled = cur === 0;
+  document.getElementById('next-btn').disabled = cur === cards.length - 1;
+  if (flipped) { inner.classList.remove('flipped'); flipped = false; }
+  if (direction === 'next') scene.style.animation = 'slideIn 0.25s ease forwards';
+  else if (direction === 'prev') scene.style.animation = 'slideInRight 0.25s ease forwards';
+}
+function flipCard() { flipped = !flipped; document.getElementById('inner').classList.toggle('flipped', flipped); }
+function nextCard() { if (cur < cards.length - 1) { cur++; render('next'); } }
+function prevCard() { if (cur > 0) { cur--; render('prev'); } }
+function shuffleCards() { cards = [...allCards].sort(() => Math.random() - 0.5); cur = 0; flipped = false; render(); }
+function resetCards() { cards = [...allCards]; cur = 0; flipped = false; render(); }
+
+document.addEventListener('keydown', e => {
+  if (document.getElementById('page-flashcards').classList.contains('active')) {
+    if (e.key === 'ArrowRight') nextCard();
+    else if (e.key === 'ArrowLeft') prevCard();
+    else if (e.key === ' ') { e.preventDefault(); flipCard(); }
+  }
+});
+
+updateSchedMeta();
+loadDeals(); renderDeals();
+loadHot(); renderHot();
+render();
+initFirestore();
+
+// Expose functions to global scope for inline HTML handlers
+window.switchTab = switchTab;
+window.toggleTask = toggleTask;
+window.resetTasks = resetTasks;
+window.addDeal = addDeal;
+window.removeDeal = removeDeal;
+window.updateDeal = updateDeal;
+window.addHot = addHot;
+window.removeHot = removeHot;
+window.updateHot = updateHot;
+window.flipCard = flipCard;
+window.nextCard = nextCard;
+window.prevCard = prevCard;
+window.shuffleCards = shuffleCards;
+window.resetCards = resetCards;
+</script>
+</body>
+</html>
